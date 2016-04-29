@@ -1,6 +1,7 @@
 use strict;
 use warnings;
 use Test::More;
+use Test::Warn;
 use Test::Fatal;
 use Carp 'croak';
 
@@ -118,19 +119,16 @@ $location = File::Spec->rel2abs( path( dirname(__FILE__), 'config_json' ) );
 
     sub name {'DevJSON'}
 
-    sub _build_environment    {'production'}
     sub _build_location       {$location}
     sub _build_default_config {$runner->config}
 }
-$ENV{DANCER_CONFIGFILE_EXT} = "json";
 
 my $y = DevJSON->new();
-is_deeply $y->config_files,
-  [ path( $location, 'config.json' ), ],
-  "config_files() only sees JSON files";
-is $y->config->{ bah }, "bag", "...and verified config.json settings are used";
+warning_like
+    { $y->config_files }
+    qr/but also found and did NOT use these config files/,
+    "Throw exception when multiple conflicting config files found";
 
-delete $ENV{DANCER_CONFIGFILE_EXT};
 $location = File::Spec->rel2abs( path( dirname(__FILE__), 'config' ) );
 
 my $j = Staging->new;
