@@ -67,7 +67,8 @@ name, as Dancer2 guesses the type of format based on the file extension.
 
 If you want to force your Dancer application to use a particular type of 
 configuration file, you can set the environment variable C<DANCER_CONFIGFILE_EXT> 
-to the extension you wish to use (C<json>, C<yaml>, etc.).
+to the extension you wish to use (C<json>, C<yaml>, etc.). The extension must
+be a filetype recognized by L<Config::Any>.
 
 =head2 Sample configuration files
 
