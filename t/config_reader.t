@@ -13,7 +13,6 @@ my $runner = Dancer2::Core::Runner->new();
 my $location = File::Spec->rel2abs( path( dirname(__FILE__), 'config' ) );
 
 {
-
     package Prod;
     use Moo;
     with 'Dancer2::Core::Role::ConfigReader';
@@ -58,6 +57,15 @@ my $location = File::Spec->rel2abs( path( dirname(__FILE__), 'config' ) );
     sub _build_location       {$location}
     sub _build_default_config {$runner->config}
 
+    package Personal;
+    use Moo;
+    with 'Dancer2::Core::Role::ConfigReader';
+
+    sub name {'Personal'}
+
+    sub _build_environment    {'personal'}
+    sub _build_location       {$location}
+    sub _build_default_config {$runner->config}
 }
 
 my $d = Dev->new();
@@ -74,6 +82,56 @@ is_deeply $f->config_files,
     path( $location, 'environments', 'production.yml' ),
   ],
   "config_files() works";
+
+# Load a specific file
+my $alt_config = "$location/foobar.yml";
+$ENV{DANCER_ALT_CONFIG} = $alt_config;
+my $p = Prod->new;
+is_deeply $p->config_files,
+  [ path( $location, 'config.yml' ),
+    path( $location, 'environments', 'production.yml' ),
+    path( $location, 'foobar.yml' ),
+  ],
+  "Setting DANCER_ALT_CONFIG loads another config file";
+
+is $p->config->{foo}, "bar", "...and the settings are available like other files";
+
+delete $ENV{DANCER_ALT_CONFIG};
+
+# Test for my-environment
+my $x = Personal->new;
+is_deeply $x->config_files,
+  [ path( $location, 'config.yml' ),
+    path( $location, 'environments', 'personal.yml' ),
+    path( $location, 'environments', 'my-personal.yml' ),
+  ],
+  "Setting loads env and my-env config files";
+
+is $x->config->{ show_errors }, "1", "...and verified my-env settings are used";
+
+# Test for files we aren't using
+$location = File::Spec->rel2abs( path( dirname(__FILE__), 'config_json' ) );
+{
+    package DevJSON;
+    use Moo;
+    with 'Dancer2::Core::Role::ConfigReader';
+
+    sub name {'DevJSON'}
+
+    sub _build_environment    {'production'}
+    sub _build_location       {$location}
+    sub _build_default_config {$runner->config}
+}
+$ENV{DANCER_CONFIGFILE_EXT} = "json";
+
+my $y = DevJSON->new();
+is_deeply $y->config_files,
+  [ path( $location, 'config.json' ), ],
+  "config_files() only sees JSON files";
+is $y->config->{ bah }, "bag", "...and verified config.json settings are used";
+
+delete $ENV{DANCER_CONFIGFILE_EXT};
+$location = File::Spec->rel2abs( path( dirname(__FILE__), 'config' ) );
 
 my $j = Staging->new;
 is_deeply $j->config_files,
